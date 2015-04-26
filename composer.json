@@ -1,0 +1,25 @@
+{
+    "name": "sky/crawler",
+    "description": "A PHP Library to find all available pages in an application and calculate count of tags 'IMG' and generate report:",
+    "license": "LGPL",
+    "authors": [
+        {
+            "name": "Tony Benny",
+            "email": "tonybenny2004@gmail.com"
+        } 
+    ],
+    "minimum-stability": "dev",
+	"prefer-stable": true,
+    "require": {
+    },
+    "require-dev": {
+        "phpunit/phpunit": ">=3.7.14"
+    },
+    "autoload": {
+        "psr-0": {
+            "Crawler": "src/"
+        },
+        "classmap":["tests/"],
+		"files": ["src/Crawler/Exceptions.php"]
+    }
+}
