@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit
-        colors="true"
+    bootstrap="./vendor/autoload.php"
+        colors="true" 
         backupGlobals="false"
         backupStaticAttributes="false"
         convertErrorsToExceptions="true"
@@ -9,7 +10,8 @@
 
     <testsuites>
         <testsuite name="Crawler Test Suite">
-            <directory suffix="CurlTest.php">tests/</directory>
+     
+            <directory suffix="CurlTest.php">./tests</directory>
            
         </testsuite>
     </testsuites>

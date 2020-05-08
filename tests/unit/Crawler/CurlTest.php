@@ -1,7 +1,7 @@
 <?php
 namespace Crawler;
- 
-class CurlTest extends \PHPUnit_Framework_TestCase {
+use PHPUnit\Framework\TestCase;
+class CurlTest extends TestCase {
 
         public function testExtensionsLoaded()
             {
