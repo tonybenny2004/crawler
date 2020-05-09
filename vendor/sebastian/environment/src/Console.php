@@ -1,86 +1,169 @@
-<?php
+<?php declare(strict_types=1);
 /*
- * This file is part of the Environment package.
+ * This file is part of sebastian/environment.
  *
  * (c) Sebastian Bergmann <sebastian@phpunit.de>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace SebastianBergmann\Environment;
 
-/**
- * @package    Environment
- * @author     Sebastian Bergmann <sebastian@phpunit.de>
- * @copyright  2014 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
- * @link       http://www.github.com/sebastianbergmann/environment
- */
-class Console
+final class Console
 {
-    const STDIN  = 0;
-    const STDOUT = 1;
-    const STDERR = 2;
+    /**
+     * @var int
+     */
+    public const STDIN  = 0;
+
+    /**
+     * @var int
+     */
+    public const STDOUT = 1;
+
+    /**
+     * @var int
+     */
+    public const STDERR = 2;
 
     /**
      * Returns true if STDOUT supports colorization.
      *
      * This code has been copied and adapted from
-     * Symfony\Component\Console\Output\OutputStream.
-     *
-     * @return boolean
+     * Symfony\Component\Console\Output\StreamOutput.
      */
-    public function hasColorSupport()
+    public function hasColorSupport(): bool
     {
-        if (DIRECTORY_SEPARATOR == '\\') {
-            return false !== getenv('ANSICON') || 'ON' === getenv('ConEmuANSI');
+        if ('Hyper' === \getenv('TERM_PROGRAM')) {
+            return true;
         }
 
-        if (!defined('STDOUT')) {
+        if ($this->isWindows()) {
+            // @codeCoverageIgnoreStart
+            return (\defined('STDOUT') && \function_exists('sapi_windows_vt100_support') && @\sapi_windows_vt100_support(\STDOUT))
+                || false !== \getenv('ANSICON')
+                || 'ON' === \getenv('ConEmuANSI')
+                || 'xterm' === \getenv('TERM');
+            // @codeCoverageIgnoreEnd
+        }
+
+        if (!\defined('STDOUT')) {
+            // @codeCoverageIgnoreStart
             return false;
+            // @codeCoverageIgnoreEnd
         }
 
-        return $this->isInteractive(STDOUT);
+        return $this->isInteractive(\STDOUT);
     }
 
     /**
      * Returns the number of columns of the terminal.
      *
-     * @return integer
+     * @codeCoverageIgnore
      */
-    public function getNumberOfColumns()
+    public function getNumberOfColumns(): int
     {
-        // Windows terminals have a fixed size of 80
-        // but one column is used for the cursor.
-        if (DIRECTORY_SEPARATOR == '\\') {
-            return 79;
-        }
-
-        if (!$this->isInteractive(self::STDIN)) {
+        if (!$this->isInteractive(\defined('STDIN') ? \STDIN : self::STDIN)) {
             return 80;
         }
 
-        if (preg_match('#\d+ (\d+)#', shell_exec('stty size'), $match) === 1) {
-            return (int) $match[1];
+        if ($this->isWindows()) {
+            return $this->getNumberOfColumnsWindows();
         }
 
-        if (preg_match('#columns = (\d+);#', shell_exec('stty'), $match) === 1) {
-            return (int) $match[1];
+        return $this->getNumberOfColumnsInteractive();
+    }
+
+    /**
+     * Returns if the file descriptor is an interactive terminal or not.
+     *
+     * Normally, we want to use a resource as a parameter, yet sadly it's not always awailable,
+     * eg when running code in interactive console (`php -a`), STDIN/STDOUT/STDERR constants are not defined.
+     *
+     * @param int|resource $fileDescriptor
+     */
+    public function isInteractive($fileDescriptor = self::STDOUT): bool
+    {
+        if (\is_resource($fileDescriptor)) {
+            // These functions require a descriptor that is a real resource, not a numeric ID of it
+            if (\function_exists('stream_isatty') && @\stream_isatty($fileDescriptor)) {
+                return true;
+            }
+
+            // Check if formatted mode is S_IFCHR
+            if (\function_exists('fstat') && @\stream_isatty($fileDescriptor)) {
+                $stat = @\fstat(\STDOUT);
+
+                return $stat ? 0020000 === ($stat['mode'] & 0170000) : false;
+            }
+
+            return false;
+        }
+
+        return \function_exists('posix_isatty') && @\posix_isatty($fileDescriptor);
+    }
+
+    private function isWindows(): bool
+    {
+        return \DIRECTORY_SEPARATOR === '\\';
+    }
+
+    /**
+     * @codeCoverageIgnore
+     */
+    private function getNumberOfColumnsInteractive(): int
+    {
+        if (\function_exists('shell_exec') && \preg_match('#\d+ (\d+)#', \shell_exec('stty size') ?: '', $match) === 1) {
+            if ((int) $match[1] > 0) {
+                return (int) $match[1];
+            }
+        }
+
+        if (\function_exists('shell_exec') && \preg_match('#columns = (\d+);#', \shell_exec('stty') ?: '', $match) === 1) {
+            if ((int) $match[1] > 0) {
+                return (int) $match[1];
+            }
         }
 
         return 80;
     }
 
     /**
-     * Returns if the file descriptor is an interactive terminal or not.
-     *
-     * @param  int|resource $fileDescriptor
-     *
-     * @return boolean
+     * @codeCoverageIgnore
      */
-    public function isInteractive($fileDescriptor = self::STDOUT)
+    private function getNumberOfColumnsWindows(): int
     {
-        return function_exists('posix_isatty') && @posix_isatty($fileDescriptor);
+        $ansicon = \getenv('ANSICON');
+        $columns = 80;
+
+        if (\is_string($ansicon) && \preg_match('/^(\d+)x\d+ \(\d+x(\d+)\)$/', \trim($ansicon), $matches)) {
+            $columns = (int) $matches[1];
+        } elseif (\function_exists('proc_open')) {
+            $process = \proc_open(
+                'mode CON',
+                [
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w'],
+                ],
+                $pipes,
+                null,
+                null,
+                ['suppress_errors' => true]
+            );
+
+            if (\is_resource($process)) {
+                $info = \stream_get_contents($pipes[1]);
+
+                \fclose($pipes[1]);
+                \fclose($pipes[2]);
+                \proc_close($process);
+
+                if (\preg_match('/--------+\r?\n.+?(\d+)\r?\n.+?(\d+)\r?\n/', $info, $matches)) {
+                    $columns = (int) $matches[2];
+                }
+            }
+        }
+
+        return $columns - 1;
     }
 }

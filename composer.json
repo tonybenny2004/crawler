@@ -1,7 +1,7 @@
 {
     "name": "sky/crawler",
     "description": "A PHP Library to find all available pages in an application and calculate count of tags 'IMG' and generate report:",
-    "license": "LGPL",
+    "license": "GPL-3.0-or-later",
     "authors": [
         {
             "name": "Tony Benny",

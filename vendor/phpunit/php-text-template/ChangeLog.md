@@ -1,9 +1,15 @@
-Text_Template 1.2
-=================
+# ChangeLog
 
-This is the list of changes for the Text_Template 1.2 release series.
+All notable changes are documented in this file using the [Keep a CHANGELOG](http://keepachangelog.com/) principles.
 
-Text_Template 1.2.0
--------------------
+## [2.0.0] - 2020-02-07
 
-* Added support for arbitrary delimiters for template variables.
+### Changed
+
+* The `Text_Template` class was renamed to `SebastianBergmann\Template\Template`
+
+### Removed
+
+* Removed support for PHP 5.3, PHP 5.4, PHP 5.5, PHP 5.6, PHP 7.0, PHP 7.1, and PHP 7.2 
+
+[2.0.0]: https://github.com/sebastianbergmann/php-text-template/compare/1.2.1...master
