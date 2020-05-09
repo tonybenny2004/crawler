@@ -12,9 +12,6 @@
 	"prefer-stable": true,
     "require": {
     },
-    "test": [
-        "vendor/bin/phpunit"
-    ],
     "require-dev": {
         "phpunit/phpunit": "^9"
     },
